@@ -58,11 +58,11 @@ class Simplex:
 
     def can_be_improved(self) -> bool:
         """Returns true if ans could be improved <=> any c[j] > 0"""
-        return any(x > 0 for x in self.c)
+        return any(x > 0 for x in self.c) if self.is_max else any(x < 0 for x in self.c)
 
     def find_solving_column(self) -> int:
         """Returns index of column that could be improved <=> j, c[j] >= c[i], i = 0..len(c)"""
-        return np.argmax(self.c)
+        return np.argmax(self.c) if self.is_max else np.argmin(self.c)
 
     def find_solving_row(self, column_index: int) -> int:
         """Returns index of row with minimal restriction"""
@@ -84,11 +84,14 @@ class Simplex:
 
         self.b[solving_row_index] /= self.a[solving_row_index][solving_column_index]
         self.a[solving_row_index] /= self.a[solving_row_index][solving_column_index]
+
         for row_index in range(self.a.shape[0]):
             if row_index == solving_row_index:
                 continue
+
             self.b[row_index] -= self.b[solving_row_index] * self.a[row_index][solving_column_index]
             self.a[row_index] -= self.a[solving_row_index] * self.a[row_index][solving_column_index]
+
         self.ans -= self.b[solving_row_index] * self.c[solving_column_index]
         self.c -= self.a[solving_row_index] * self.c[solving_column_index]
 
