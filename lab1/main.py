@@ -1,6 +1,8 @@
+from __future__ import annotations
 import numpy as np
-from lab1.simplex_method import *
-from lab1.tableau import *
+import math
+# from lab1.simplex_method import *
+# from lab1.tableau import *
 
 
 class Simplex:
@@ -9,14 +11,16 @@ class Simplex:
     b: np.array
     c: np.array
     is_max: bool
+    print_steps: bool
     tableau: np.array
 
-    def __init__(self, a: np.array, b: np.array, c: np.array, is_max: bool):
+    def __init__(self, a: np.array, b: np.array, c: np.array, is_max: bool, print_steps: bool = False):
         self.a = a
         self.b = b 
         self.c = c
         self.ans = 0
         self.is_max = is_max
+        self.print_steps = print_steps
         self.to_tableau()
 
     def to_tableau(self):
@@ -27,12 +31,12 @@ class Simplex:
         AA...AAB
         CC...CC0
         """
-        xb = [eq + [x] for eq, x in zip(self.a, self.b)]
-        z = self.c + [self.ans]
-        self.tableau = np.array(xb + [z])
+        xb = np.column_stack((self.a, self.b.T))
+        z = np.column_stack(([self.c], [[self.ans]]))
+        self.tableau = np.vstack((xb, z))
 
     @classmethod
-    def read_from_file(cls, path: str) -> Simplex:
+    def read_from_file(cls, path: str) -> cls:
         """Reads data written in file using specific format, return Simplex class"""
         with open(path, "r") as f:
             is_max = False
@@ -63,7 +67,7 @@ class Simplex:
     def find_solving_row(self, column_index: int) -> int:
         """Returns index of row with minimal restriction"""
         restrictions = []
-        for row_index in range(self.a):
+        for row_index in range(self.a.shape[0]):
             el = self.a[row_index][column_index]
             restrictions.append(math.inf if el <= 0 else self.b[row_index] / el)
 
@@ -73,45 +77,55 @@ class Simplex:
             raise Exception('No answer could be found. Range of valid values is infinite')
         return row_index
 
-    def change_row_sign(table: np.array, solving_column_index: int, solving_row_index: int) -> np.array:
-        for i in range(len(table.shape[1])):
-            if i != solving_column_index:
-                table[solving_row_index][i] *= -1
-        return table
+    def next_step(self):
+        """Make iteration: find restrictions, edit tableau"""
+        solving_column_index = self.find_solving_column()
+        solving_row_index = self.find_solving_row(solving_column_index)
 
-    def calculate_rectangle_method(self, solving_column_index: int, solving_row_index: int) -> np.array:
-        new_table = self.tableau.copy()
-        for i in range(table.shape[0]):
-            for j in range(table.shape[1]):
-                if not (i == solving_column_index or j == solving_row_index):
-                    new_table[i, j] = table[i, j] * table[solving_row_index, solving_column_index] - table[i, solving_column_index] * table[solving_row_index, j]
-        return new_table
+        self.b[solving_row_index] /= self.a[solving_row_index][solving_column_index]
+        self.a[solving_row_index] /= self.a[solving_row_index][solving_column_index]
+        for row_index in range(self.a.shape[0]):
+            if row_index == solving_row_index:
+                continue
+            self.b[row_index] -= self.b[solving_row_index] * self.a[row_index][solving_column_index]
+            self.a[row_index] -= self.a[solving_row_index] * self.a[row_index][solving_column_index]
+        self.ans -= self.b[solving_row_index] * self.c[solving_column_index]
+        self.c -= self.a[solving_row_index] * self.c[solving_column_index]
 
-    def divide_to_solving_element(table: np.array, solving_column_index: int, solving_row_index: int) -> np.array:
-        solving_element = table[solving_row_index, solving_column_index]
-        for i in range(table.shape[0]):
-            for j in range(table.shape[1]):
-                table[i][j] /= solving_element
-        return table
+        self.to_tableau()
 
-    def solve(self, solving_x: list, free_x: list) -> float:
+    def solve(self) -> float:
         """Solves linear equasion system using simplex method"""
+        if self.print_steps:
+            print(self.tableau)
+
         while self.can_be_improved():
-            solving_column_index = self.find_solving_column()
-            solving_row_index = self.find_solving_row(solving_column_index)
-            
-            table_copy = table.copy()
-            table_copy = calculate_rectangle_method(table_copy, solving_column_index, solving_row_index)
-            table_copy = change_row_sign(table_copy, solving_column_index, solving_row_index)
-            table_copy = divide_to_solving_element(table_copy, solving_column_index, solving_row_index)
-            table = table_copy
+            self.next_step()
 
-        return self.ans
+            if self.print_steps:
+                print(self.tableau)
 
+        return -self.ans
+
+    @classmethod
+    def is_basic(cls, column: np.array) -> bool:
+        return sum(column) == 1 and column.tolist().count(0) == len(column) - 1
+
+    def get_solution(self):
+        columns = self.tableau.T
+        solutions = []
+        for column in columns[:-1]:
+            solution = 0
+            if self.is_basic(column):
+                one_index = column.tolist().index(1)
+                solution = columns[-1][one_index]
+            solutions.append(solution)
+        
+        return solutions
 
 
 if __name__ == '__main__':
-    # aboba = read_from_file('./input-files/first.txt')
+    # simplex = read_from_file('./input-files/first.txt')
     simplex = Simplex.read_from_file('./input-files/second.txt')
-    print(solve(simplex.tableau, [], []))
-    # print(b)
+    print(simplex.solve())
+    print(simplex.get_solution())
