@@ -70,8 +70,8 @@ def handle_table(table: np.array, solving_x: list, free_x: list) -> float:
         table = table_copy
 
 
-print(t.shape[1])
-print(find_solving_column(t))
-print(find_solving_row(t, 1))
+# print(t.shape[1])
+# print(find_solving_column(t))
+# print(find_solving_row(t, 1))
 
 
