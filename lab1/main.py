@@ -1,8 +1,6 @@
 from __future__ import annotations
 import numpy as np
 import math
-# from lab1.simplex_method import *
-# from lab1.tableau import *
 
 
 class Simplex:
@@ -14,7 +12,14 @@ class Simplex:
     print_steps: bool
     tableau: np.array
 
-    def __init__(self, a: np.array, b: np.array, c: np.array, is_max: bool, print_steps: bool = False):
+    def __init__(
+            self, 
+            a: np.array, 
+            b: np.array, 
+            c: np.array, 
+            is_max: bool, 
+            print_steps: bool = False
+    ):
         self.a = a
         self.b = b 
         self.c = c
@@ -22,6 +27,14 @@ class Simplex:
         self.is_max = is_max
         self.print_steps = print_steps
         self.to_tableau()
+        self.fix_b()
+
+    def fix_b(self):
+        """Check if any b is < 0 and fix it"""
+        if any(x < 0 for x in self.b):
+            row_index = np.argmin(self.b)
+            column_index = np.argmin(self.a[row_index])
+            self.next_step(row_index, column_index)
 
     def to_tableau(self):
         """
@@ -77,11 +90,8 @@ class Simplex:
             raise Exception('No answer could be found. Range of valid values is infinite')
         return row_index
 
-    def next_step(self):
+    def next_step(self, solving_row_index: int, solving_column_index: int):
         """Make iteration: find restrictions, edit tableau"""
-        solving_column_index = self.find_solving_column()
-        solving_row_index = self.find_solving_row(solving_column_index)
-
         self.b[solving_row_index] /= self.a[solving_row_index][solving_column_index]
         self.a[solving_row_index] /= self.a[solving_row_index][solving_column_index]
 
@@ -103,15 +113,17 @@ class Simplex:
             print(self.tableau)
 
         while self.can_be_improved():
-            self.next_step()
+            solving_column_index = self.find_solving_column()
+            solving_row_index = self.find_solving_row(solving_column_index)
+            self.next_step(solving_row_index, solving_column_index)
 
             if self.print_steps:
                 print(self.tableau)
 
         return -self.ans
 
-    @classmethod
-    def is_basic(cls, column: np.array) -> bool:
+    @staticmethod
+    def is_basic(column: np.array) -> bool:
         return sum(column) == 1 and column.tolist().count(0) == len(column) - 1
 
     def get_solution(self):
