@@ -1,6 +1,7 @@
 from __future__ import annotations
 import numpy as np
 import math
+import itertools
 
 
 class Simplex:
@@ -13,20 +14,21 @@ class Simplex:
     tableau: np.array
 
     def __init__(
-            self, 
-            a: np.array, 
-            b: np.array, 
-            c: np.array, 
-            is_max: bool, 
+            self,
+            a: np.array,
+            b: np.array,
+            c: np.array,
+            is_max: bool,
             print_steps: bool = False
     ):
         self.a = a
-        self.b = b 
+        self.b = b
         self.c = c
         self.ans = 0
         self.is_max = is_max
         self.print_steps = print_steps
         self.to_tableau()
+        self.make_basic_columns()
         self.fix_b()
 
     def fix_b(self):
@@ -35,6 +37,25 @@ class Simplex:
             row_index = np.argmin(self.b)
             column_index = np.argmin(self.a[row_index])
             self.next_step(row_index, column_index)
+
+    def make_basic_columns(self):
+        columns = np.array(self.tableau).T
+        rows_idx = list(range(len(columns[0]) - 1))
+        col_idx = list(range(len(columns) - 1))
+        count = 0
+        for i, col in enumerate(columns[:-1]):
+            if self.is_basic(col):
+                count = count + 1
+                rows_idx.remove(np.argmax(col))
+                col_idx.remove(np.argmax(col_idx))
+        for i in range(len(columns[0]) - 1 - count):
+            el_iter = itertools.product(rows_idx, col_idx)
+            idx = next(el_iter)
+            while self.tableau[idx[0]][idx[1]] == 0:
+                idx = next(el_iter)
+            self.next_step(idx[0], idx[1])
+            rows_idx.remove(idx[0])
+            col_idx.remove(idx[1])
 
     def to_tableau(self):
         """
@@ -67,7 +88,7 @@ class Simplex:
                 a_matrix.append([float(num) for num in line.strip().split(',')])
 
             b_matrix = [float(num) for num in f.readline().strip().split(',')]
-            return cls(np.array(a_matrix), np.array(b_matrix), np.array(c), is_max)
+            return cls(np.array(a_matrix), np.array(b_matrix), np.array(c), is_max, print_steps=True)
 
     def can_be_improved(self) -> bool:
         """Returns true if ans could be improved <=> any c[j] > 0"""
@@ -135,12 +156,13 @@ class Simplex:
                 one_index = column.tolist().index(1)
                 solution = columns[-1][one_index]
             solutions.append(solution)
-        
+
         return solutions
 
 
 if __name__ == '__main__':
     # simplex = read_from_file('./input-files/first.txt')
-    simplex = Simplex.read_from_file('./input-files/second.txt')
-    print(simplex.solve())
-    print(simplex.get_solution())
+    for task_num in range(1, 7):
+        simplex = Simplex.read_from_file(f'./input-files/task{task_num}.txt')
+        print(simplex.solve())
+        print(simplex.get_solution())
