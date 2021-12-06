@@ -32,7 +32,7 @@ class NumSolve:
 		plt.plot(data, label=[1, 2, 3, 4, 5, 6, 7, 8])
 		plt.legend(loc='best')
 		plt.show()
-		print(self.pi)
+		# print(self.pi)
 
 	def generate_norm_graph(self):
 		data = [
@@ -60,6 +60,10 @@ class NumSolve:
 		self.generate_distribution_graph()
 		self.generate_norm_graph()
 
+		print("ANSWER\n")
+		with np.printoptions(precision=10, suppress=True):
+			print(self.pi)
+		print("\n\n")
 
 class AnalSolve:
 	def __init__(self, p: np.matrix):
@@ -71,15 +75,23 @@ class AnalSolve:
 		a = p.T
 		for i in range(len(a)):
 			a[i, i] -= 1
+
+		a = np.append(a, [np.ones(len(a))], axis=0)
+
 		b = [0 for _ in range(len(a))]
-		print("ASDASDA", a)
-		print("DDDD", b)
+		b[-1] = 1
+		print(a)
+		print(b)
 		return a, b
 
 	def solve_system(self):
-		# return np.linalg.solve(self.a, self.b)
-		return np.linalg.det(self.a)
-		# return np.dot(np.linalg.inv(self.a), self.b)
+		answ = np.linalg.lstsq(self.a, self.b, rcond=None)[0]
+		print("ANSWER")
+		with np.printoptions(precision=10, suppress=True):
+			print(answ)
+		print("\n\n")
+		# return np.linalg.lstsq(self.a, self.b, rcond=None)[0]
+
 
 
 if __name__ == "__main__":
@@ -93,13 +105,27 @@ if __name__ == "__main__":
 			[0, 0.2, 0, 0, 0, 0, 0.2, 0.6],
 			[0, 0, 0, 0, 0.2, 0.6, 0.2, 0]]
 	)
+	# p = np.matrix([
+	# 		[0.6, 0.2, 0.1, 0.1, 0, 0, 0, 0],
+	# 		[0.5, 0.3, 0, 0, 0.1, 0.1, 0, 0],
+	# 		[0.5, 0, 0.3, 0, 0.1, 0, 0.1, 0],
+	# 		[0.5, 0, 0, 0.3, 0, 0.1, 0.1, 0],
+	# 		[0, 0.4, 0.3, 0, 0.2, 0, 0, 0.1],
+	# 		[0, 0.5, 0, 0.1, 0, 0.2, 0, 0.2],
+	# 		[0, 0, 0.1, 0.2, 0, 0, 0.2, 0.5],
+	# 		[0, 0, 0, 0, 0.2, 0.6, 0.1, 0.1]]
+	# )
 	pi = np.matrix([[1, 0, 0, 0, 0, 0, 0, 0]])
+	prikol = NumSolve(p, pi)
+	prikol.solve()
 
+	pi = np.matrix([[0, 1, 0, 0, 0, 0, 0, 0]])
 	prikol = NumSolve(p, pi)
 	prikol.solve()
 
 	prikol2 = AnalSolve(p)
-	print(f"{prikol2.solve_system()}")
+	prikol2.solve_system()
+	# print(f"{prikol2.solve_system()}")
 
 
 
