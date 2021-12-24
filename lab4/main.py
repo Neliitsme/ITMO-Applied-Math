@@ -3,52 +3,68 @@ from scipy.integrate import odeint
 import matplotlib.pyplot as plt
 
 
-def F(s, t):
-    a = 7.23
-    b = 4.9
-    p0 = -a * s[0] + b * s[1]
-    p1 = a * s[0] + 2 * b * s[2] - a * s[1] - b * s[1]
-    p2 = a * s[1] + 3 * b * s[3] - 2 * b * s[2] - a * s[2]
-    p3 = a * s[2] + 4 * b * s[4] - 3 * b * s[3] - a * s[3]
-    p4 = a * s[3] + 4 * b * s[5] - 4 * b * s[4] - a * s[4]
-    p5 = a * s[4] - 4 * b * s[5]
+class Solve:
+    def __init__(
+            self,
+            flow_intensity=7.23,
+            service_intensity=4.9,
+            channel_count=4,
+            queue_size=1,
+    ):
+        self.alpha = flow_intensity
+        self.mu = service_intensity
+        self.r = channel_count
+        self.m = queue_size
 
-    # [dvdt, dudt]
-    return [p0, p1, p2, p3, p4, p5]
+        self.s = [0 for _ in range(1 + self.r + self.m)]
+        self.s[0] = 1
 
+        self.t = np.linspace(0, 2)
 
-def K(s):
-    dx = (s[1] + 2 * s[2] + 3 * s[3] + 4 * (s[4] + s[5])) / 4
-    dz = (s[3] + 2 * s[2] + 3 * s[1] + 4 * s[0]) / 4
+    def generate_step(self):
+        if len(self.s) == 1:
+            return lambda s, t: s
 
-    return dx, dz
+        def step(s, t):
+            ans = [0 for _ in range(len(s))]
+            for i in range(len(s)):
+                if i < len(s) - 1:
+                    ans[i] -= self.alpha * s[i]
+                    ans[i] += min(self.r, i + 1) * self.mu * s[i + 1]
+                if i > 0:
+                    ans[i] += self.alpha * s[i - 1]
+                    ans[i] -= min(self.r, i) * self.mu * s[i]
+            return ans
+        return step
 
+    def draw(self, data: np.matrix):
+        for i in range(data.shape[1]):
+            plt.plot(self.t, data[:, i])
+        plt.show()
 
-def solve():
-    t = np.linspace(0, 2)
-    s0 = [1, 0, 0, 0, 0, 0]
-    s = odeint(F, s0, t)
-    graph_1(t, s)
-    graph_2(t, s)
+    def transform_to_avg(self, steps: np.matrix):
+        ans = []
+        for step in steps:
+            ans.append([0, 0])
+            for i in range(step.shape[1]):
+                ans[-1][0] += min(self.r, i) * step[0, i]
+                ans[-1][1] += max(self.r - i, 0) * step[0, i]
 
+        print(ans)
+        ans = np.matrix(ans)
+        return ans
 
-def graph_1(t, s):
-    plt.plot(t, s[:, 0], color="#68EDD5",  linewidth=2.0, label="x(t)")
-    plt.plot(t, s[:, 1], color="#ED7468",  linewidth=2.0, label="y(t)")
-    plt.plot(t, s[:, 2], color="#EDC268",  linewidth=2.0, label="z(t)")
-    plt.plot(t, s[:, 3], color="#D868ED",  linewidth=2.0, label="c(t)")
-    plt.plot(t, s[:, 4], color="#6D9CF7",  linewidth=2.0, label="b(t)")
-    plt.plot(t, s[:, 5], color="#F1F76D",  linewidth=2.0, label="n(t)")
-    plt.show()
+    def solve(self):
+        func = self.generate_step()
 
+        steps = odeint(func, self.s, self.t)
+        steps = np.matrix(steps)
+        self.draw(steps)
 
-def graph_2(t, s):
-    d = [K(x) for x in s]
-    d = np.matrix(d)
-    plt.plot(t, d[:, 0])
-    plt.plot(t, d[:, 1])
-    plt.show()
+        avg_steps = self.transform_to_avg(steps)
+        self.draw(avg_steps)
 
 
 if __name__ == "__main__":
-    solve()
+    kebab2 = Solve()
+    kebab2.solve()
